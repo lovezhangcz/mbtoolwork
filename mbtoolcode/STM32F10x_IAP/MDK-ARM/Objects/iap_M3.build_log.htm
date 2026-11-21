@@ -1,0 +1,140 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.22.0.0
+Copyright (C) 2016 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: james james, james, LIC=HN0AE-55T91-CXSU6-D2FSP-BNK0P-63AZI
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.22
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 4 (build 422)
+Assembler:       Armasm.exe V5.06 update 4 (build 422)
+Linker/Locator:  ArmLink.exe V5.06 update 4 (build 422)
+Library Manager: ArmAr.exe V5.06 update 4 (build 422)
+Hex Converter:   FromElf.exe V5.06 update 4 (build 422)
+CPU DLL:         SARMCM3.DLL V5.22
+Dialog DLL:      DARMSTM.DLL V1.67.0.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V2.0.18.0
+Dialog DLL:      TARMSTM.DLL V1.66.0.0
+ 
+<h2>Project:</h2>
+C:\keilwork2\stackboard\stackboard_ucosbaseframe_FOClibM3_M3bms_GASSIS_libused_M2M3_SPS\STM32F10x_IAP_KS-B1u1_GD2\MDK-ARM\iap.uvprojx
+Project File Date:  04/27/2023
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 4 (build 422)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Rebuild target 'IAP_KS_M3'
+compiling aes.c...
+compiling stm32f10x_crc.c...
+compiling flash_port.c...
+compiling stm32f10x_dma.c...
+compiling misc.c...
+compiling stm32f10x_pwr.c...
+compiling stm32f10x_bkp.c...
+compiling stm32f10x_flash.c...
+compiling uart.c...
+..\src\uart.c(403): warning:  #167-D: argument of type "char *" is incompatible with parameter of type "u8 *"
+  				crcexpack(buffer_dma,&temlen,temdmabuf);
+..\src\uart.c(404): warning:  #167-D: argument of type "u8 *" is incompatible with parameter of type "char *"
+  				uart_receivePushToBuffer(&uartDMA,temdmabuf,temlen);
+..\src\uart.c(378): warning:  #550-D: variable "len"  was set but never used
+    u32 len;
+..\src\uart.c: 3 warnings, 0 errors
+compiling ymodem.c...
+compiling main.c...
+compiling stm32f10x_gpio.c...
+assembling startup_stm32f10x_md.s...
+compiling stm32f10x_iwdg.c...
+compiling system_stm32f10x.c...
+compiling stm32f10x_usart.c...
+compiling stm32f10x_rcc.c...
+compiling stm32f10x_tim.c...
+linking...
+Program Size: Code=9492 RO-data=352 RW-data=196 ZI-data=3268  
+FromELF: creating hex file...
+After Build - User command #1: fromelf.exe --bin -o ./iap_M3.bin ./Objects/iap_M3.axf
+".\Objects\iap_M3.axf" - 0 Error(s), 3 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.0.0.pack
+                ARM::CMSIS:CORE:5.0.0
+                CMSIS (Cortex Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.0.0
+
+Package Vendor: Keil
+                
+                Keil::Device:StdPeriph Drivers:GPIO:3.5.0
+                STMicroelectronics STM32F1 Series Device Support, Drivers For Transplant To AT32F4 Series.
+   * Component: GPIO Version: 3.5.0
+   * Component: IWDG Version: 3.5.0
+   * Component: Startup Version: 1.0.0
+   * Component: RCC Version: 3.5.0
+   * Component: Flash Version: 3.5.0
+   * Component: CRC Version: 3.5.0
+   * Component: USART Version: 3.5.0
+   * Component: DMA Version: 3.5.0
+   * Component: Framework Version: 3.5.1
+   * Component: TIM Version: 3.5.0
+
+<h2>Collection of Component include folders:</h2>
+  C:\keilwork2\stackboard\stackboard_ucosbaseframe_FOClibM3_M3bms_GASSIS_libused_M2M3_SPS\STM32F10x_IAP_KS-B1u1_GD2\MDK-ARM\RTE\_IAP_KS_M3
+  C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.0.0\CMSIS\Include
+  C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\10.0.3\Device\Include
+  C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\10.0.3\Device\StdPeriph_Driver\inc
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.0.0
+
+   * Component: Keil::Device:StdPeriph Drivers:GPIO:3.5.0
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_gpio.h
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_gpio.c
+
+   * Component: Keil::Device:StdPeriph Drivers:IWDG:3.5.0
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_iwdg.c
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_iwdg.h
+
+   * Component: Keil::Device:Startup:1.0.0
+      Source file:   Device\Source\ARM\startup_stm32f10x_md.s
+      Source file:   Device\Source\system_stm32f10x.c
+      Source file:   Device\Source\ARM\STM32F1xx_OPT.s
+
+   * Component: Keil::Device:StdPeriph Drivers:RCC:3.5.0
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_rcc.h
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_rcc.c
+
+   * Component: Keil::Device:StdPeriph Drivers:Flash:3.5.0
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_flash.c
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_flash.h
+
+   * Component: Keil::Device:StdPeriph Drivers:CRC:3.5.0
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_crc.c
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_crc.h
+
+   * Component: Keil::Device:StdPeriph Drivers:USART:3.5.0
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_usart.h
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_usart.c
+
+   * Component: Keil::Device:StdPeriph Drivers:DMA:3.5.0
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_dma.c
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_dma.h
+
+   * Component: Keil::Device:StdPeriph Drivers:Framework:3.5.1
+      Include file:  Device\StdPeriph_Driver\inc\misc.h
+      Source file:   Device\StdPeriph_Driver\src\misc.c
+      Include file:  Device\StdPeriph_Driver\templates\stm32f10x_it.h
+      Source file:   Device\StdPeriph_Driver\templates\stm32f10x_it.c
+      Source file:   Device\StdPeriph_Driver\templates\stm32f10x_conf.h
+
+   * Component: Keil::Device:StdPeriph Drivers:TIM:3.5.0
+      Source file:   Device\StdPeriph_Driver\src\stm32f10x_tim.c
+      Include file:  Device\StdPeriph_Driver\inc\stm32f10x_tim.h
+Build Time Elapsed:  00:00:02
+</pre>
+</body>
+</html>
