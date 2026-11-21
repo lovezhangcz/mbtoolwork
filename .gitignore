@@ -1,0 +1,24 @@
+# Keil MDK
+*.uvgui*
+*.bak
+*.dep
+*.o
+*.d
+*.axf
+*.elf
+*.hex
+*.bin
+*.map
+*.crf
+*.lst
+*.sct
+*.lnp
+JLinkLog.txt
+Debug/
+Build/
+OBJ/
+Output/
+
+# 系统缓存
+.DS_Store
+Thumbs.db
