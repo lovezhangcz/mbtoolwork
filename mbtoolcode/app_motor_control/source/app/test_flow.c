@@ -53,6 +53,8 @@ static u8         s_retry;       /* 通用重试计数 */
 static s32        s_mv[4];       /* 最近四路电压 mV */
 static u8         s_volt_done;   /* 电压检查已执行 */
 static u8         s_key1_evt, s_key2_evt;  /* 按键事件（消抖后） */
+static u32        s_elapse_10ms;           /* 本轮用时（10ms，PRE_CHECK 起 MOTOR_TEST 止） */
+static u16        s_cnt_done, s_cnt_pass, s_cnt_fail;  /* 产量计数（RAM，TODO(持久化)：可存 BKP/Flash） */
 
 tf_fail_t g_tf_fail;
 
@@ -154,6 +156,64 @@ u8 test_flow_progress(void)
     return base;
 }
 
+/* ---------------- 辅助：版本文本 / 机型文本 / HEX 报警字 ---------------- */
+#define TF_JIG_VER_TEXT   "JIG-1.0.0"      /* 治具固件版本（设置页 0x0168 显示） */
+
+static void tf_hex4(char *out, u16 v)      /* "0xXXXX" 6 字符 + \0 */
+{
+    static const char hd[] = "0123456789ABCDEF";
+    out[0] = '0'; out[1] = 'x';
+    out[2] = hd[(v >> 12) & 0xFu]; out[3] = hd[(v >> 8) & 0xFu];
+    out[4] = hd[(v >> 4) & 0xFu];  out[5] = hd[v & 0xFu];
+    out[6] = 0;
+}
+
+static void tf_model_text(char *out)       /* "NNNNNNNN vVVV"，<=15B，握手成功后调用 */
+{
+    u8 n = 0, i;
+    for (i = 0; i < 8 && g_jig_hs.model[i] && n < 11; i++) { out[n++] = (char)g_jig_hs.model[i]; }
+    out[n++] = ' '; out[n++] = 'v';
+    for (i = 0; i < 4 && g_jig_hs.version[i] && n < 15; i++) { out[n++] = (char)g_jig_hs.version[i]; }
+    out[n] = 0;
+}
+
+/* ---------------- 辅助：34 项实时上屏标记（位掩码，0~31 在 lo，32~33 在 hi） ---------------- */
+static unsigned long s_items_sent_lo, s_items_sent_hi;
+
+static u8 tf_item_sent(u8 i)
+{
+    return (i < 32) ? (u8)((s_items_sent_lo >> i) & 1ul)
+                    : (u8)((s_items_sent_hi >> (i - 32)) & 1ul);
+}
+static void tf_item_mark(u8 i)
+{
+    if (i < 32) { s_items_sent_lo |= (1ul << i); }
+    else        { s_items_sent_hi |= (1ul << (i - 32)); }
+}
+
+/* 新一轮测试开始：清回读区 / 34 项 / 结论图标 / 进度 / 耗时 / 报警字 */
+static void ui_board_reset(void)
+{
+    u8 i;
+    s_elapse_10ms = 0;
+    s_items_sent_lo = 0; s_items_sent_hi = 0;
+    vgus_write_u16(VP_PROGRESS, 0);
+    vgus_write_u16(VP_RESULT_ICON, 0);
+    vgus_write_u16(VP_TOTAL_CUR, 0);
+    vgus_write_u16(VP_MOS_TEMP, 0);
+    vgus_write_u16(VP_DUT_BUSVOL, 0);
+    vgus_write_u16(VP_DUT_CPUVOL, 0);
+    vgus_write_u16(VP_DUT_COMMU, 0);
+    vgus_write_u16(VP_ELAPSED, 0);
+    vgus_write_text(VP_DUT_WARN, "----", 16);
+    for (i = 0; i < JIG_ITEM_NUM; i += 8) {          /* 68 字分 5 帧清零 */
+        u16 w[16];
+        u8  k, n = 0;
+        for (k = 0; k < 8 && (i + k) < JIG_ITEM_NUM; k++) { w[n++] = 0; w[n++] = 0; }
+        vgus_write_words((u16)(VP_ITEM_BASE + i * 2), w, n);
+    }
+}
+
 /* ================= 各状态处理 ================= */
 static void st_self_check(void)
 {
@@ -163,6 +223,8 @@ static void st_self_check(void)
         u8 ok_adc, ok_scr;
         ok_adc = ads131_init(&id);
         vgus_read_version();
+        vgus_write_text(VP_JIG_VER, TF_JIG_VER_TEXT, 16);   /* 设置页-治具版本 */
+        vgus_write_u16(VP_BL_VALUE, 0x40u);                 /* 背光默认最大，回显设置页 */
         /* 屏握手：100ms 内应收到版本应答；此处先标记，tick 后检查 */
         ok_scr = 1;
         buzz_set(10, 5, 1);                      /* 短响一声 */
@@ -198,6 +260,7 @@ static void st_wait_board(void)
         key_led(1, 1);
         jig_proto_init();                        /* 清上一轮缓存 */
         g_tf_fail.cnt = 0;
+        ui_board_reset();                        /* 清屏上本轮数据区 */
         tf_goto(TF_PRE_CHECK);
     }
 }
@@ -284,6 +347,9 @@ static void st_comm_test(void)
 {
     if (s_tick == 1) { jig_send_handshake(); }
     if (g_jig_hs.ok) {
+        char mt[18];
+        tf_model_text(mt);
+        vgus_write_text(VP_DUT_MODEL, mt, 16);           /* 主页+设置页 机型 */
         tf_goto(TF_DATA_ACQ);
         return;
     }
@@ -314,6 +380,14 @@ static void st_data_acq(void)
         }
         vgus_write_s16(VP_TOTAL_CUR, g_jig_rt.total_cur);
         vgus_write_s16(VP_MOS_TEMP,  g_jig_rt.mos_temp);
+        vgus_write_u16(VP_DUT_BUSVOL, g_jig_rt.bus_vol);
+        vgus_write_u16(VP_DUT_CPUVOL, g_jig_rt.cpu_vol);
+        vgus_write_u16(VP_DUT_COMMU,  g_jig_rt.commu_cnt);
+        {
+            char hx[8];
+            tf_hex4(hx, g_jig_rt.warn);
+            vgus_write_text(VP_DUT_WARN, hx, 16);        /* 报警字 HEX 文本，如 0x0041 */
+        }
         tf_goto(TF_MOTOR_TEST);
     }
     if (s_tick >= TMO_DATA_ACQ) {
@@ -330,7 +404,23 @@ static void st_motor_test(void)
         last_done = 0;
         jig_send_start();                                /* 0x02 启动整套自检 */
     }
-    if ((s_tick % 20) == 0) { jig_send_progress(); }     /* 200ms 轮询进度 */
+    if ((s_tick % 20) == 0) {
+        jig_send_progress();                             /* 200ms 轮询进度 */
+        vgus_write_u16(VP_PROGRESS, test_flow_progress());
+    }
+    /* 单项结果实时上屏：值 + 判定（0 未测 / 1 过 / 2 败，对应 40.ICO 图标 0~2） */
+    {
+        u8 i;
+        for (i = 0; i < JIG_ITEM_NUM; i++) {
+            if (g_jig_items[i].valid && !tf_item_sent(i)) {
+                u16 w[2];
+                w[0] = (u16)g_jig_items[i].value;
+                w[1] = g_jig_items[i].pass ? 1u : 2u;
+                vgus_write_words((u16)(VP_ITEM_BASE + i * 2), w, 2);
+                tf_item_mark(i);
+            }
+        }
+    }
 
     /* 完成帧到达 → 汇总 */
     if (g_jig_fin.valid) {
@@ -364,17 +454,25 @@ static void st_result(void)
 {
     if (s_tick == 1) {
         u8 i;
-        vgus_set_page(VGUS_PAGE_RESULT);
-        /* 34 项结果整块上屏：每项 2 字（值，判定） */
+        u8 pass_all = (u8)(g_tf_fail.cnt == 0);
+        /* 34 项兜底整块上屏：每项 2 字（值，判定 0 未测/1 过/2 败），补齐实时未刷项 */
         for (i = 0; i < JIG_ITEM_NUM; i += 8) {          /* 分块写，单帧 ≤16 字 */
             u16 w[16];
             u8  k, n = 0;
             for (k = 0; k < 8 && (i + k) < JIG_ITEM_NUM; k++) {
                 w[n++] = (u16)g_jig_items[i + k].value;
-                w[n++] = g_jig_items[i + k].valid ? (g_jig_items[i + k].pass ? 1 : 0) : 0xFFFFu;
+                w[n++] = g_jig_items[i + k].valid ? (u16)(g_jig_items[i + k].pass ? 1u : 2u) : 0u;
             }
             vgus_write_words((u16)(VP_ITEM_BASE + i * 2), w, n);
         }
+        /* 计数 / 总结论图标 / 耗时 */
+        s_cnt_done++;
+        if (pass_all) { s_cnt_pass++; } else { s_cnt_fail++; }
+        vgus_write_u16(VP_CNT_DONE, s_cnt_done);
+        vgus_write_u16(VP_CNT_PASS, s_cnt_pass);
+        vgus_write_u16(VP_CNT_FAIL, s_cnt_fail);
+        vgus_write_u16(VP_RESULT_ICON, pass_all ? 1u : 2u);
+        vgus_write_u16(VP_ELAPSED, (u16)(s_elapse_10ms / 10u));   /* 0.1s */
         if (g_tf_fail.cnt) {
             buzz_set(10, 10, 3);                         /* FAIL：三短声 */
             key_led(2, 1); key_led(1, 0);
@@ -412,6 +510,12 @@ static void st_power_off(void)
 }
 
 /* ================= 主入口 ================= */
+void test_flow_key(u8 idx)
+{
+    if (idx == 1)      { s_key1_evt = 1; }
+    else if (idx == 2) { s_key2_evt = 1; }
+}
+
 void test_flow_init(void)
 {
     s_state = TF_SELF_CHECK;
@@ -453,6 +557,9 @@ void test_flow_run(void)
     default:              tf_goto(TF_SELF_CHECK); break;
     }
 
+    if (s_state >= TF_PRE_CHECK && s_state <= TF_MOTOR_TEST) {
+        s_elapse_10ms++;                                 /* 本轮计时（RESULT 冻结显示） */
+    }
     s_tick++;
     runled_toggle();                                     /* 运行灯心跳 10Hz→5Hz 闪烁 */
 }

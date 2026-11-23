@@ -132,6 +132,8 @@ void CUsartCommTask(void *p_arg)
     }
 }
 
+static u8 s_bl_level = 0x40u;   /* 屏背光当前值（0x00~0x40，上电默认最大） */
+
 /**
   * @brief  屏幕任务：40Hz，解析触摸上传与读应答
   */
@@ -146,8 +148,44 @@ void bluetoothtast(void *p_arg)
         OSMboxPend(g_ptbluetoothtastMBox, 100, &err);
         vgus_poll();
         if (g_vgus_touch.new_flag) {
-            /* TODO(UI)：触摸键值 → 操作映射，等 UI 方案定稿后填 */
+            u16 tkey = g_vgus_touch.key;             /* 键值表见 vgus.h VGUS_KEY_* */
             g_vgus_touch.new_flag = 0;
+            switch (tkey) {
+            case VGUS_KEY_START:                     /* 启动测试（=实体 KEY1） */
+                test_flow_key(1);
+                break;
+            case VGUS_KEY_RETEST:                    /* 重测/取消（=实体 KEY2） */
+            case VGUS_KEY_STOP:                      /* 停止同取消语义 */
+                test_flow_key(2);
+                break;
+            case VGUS_KEY_DETAIL:                    /* 主页 -> 明细页 */
+                vgus_set_page(VGUS_PAGE_RESULT);
+                break;
+            case VGUS_KEY_BACK:                      /* 返回主页 */
+                vgus_set_page(VGUS_PAGE_MAIN);
+                break;
+            case VGUS_KEY_SETTING:                   /* 进设置页 */
+                vgus_set_page(VGUS_PAGE_SET);
+                break;
+            case VGUS_KEY_BL_UP:                     /* 背光+（步进 8，上限 0x40） */
+                s_bl_level = (u8)((s_bl_level + 8 > 0x40) ? 0x40 : (s_bl_level + 8));
+                vgus_set_backlight(s_bl_level);
+                vgus_write_u16(VP_BL_VALUE, s_bl_level);
+                break;
+            case VGUS_KEY_BL_DOWN:                   /* 背光-（步进 8，下限 8） */
+                s_bl_level = (u8)((s_bl_level > 8) ? (s_bl_level - 8) : 8);
+                vgus_set_backlight(s_bl_level);
+                vgus_write_u16(VP_BL_VALUE, s_bl_level);
+                break;
+            case VGUS_KEY_BUZZ_TEST:                 /* 屏蜂鸣器试响 200ms */
+                vgus_buzzer(20);
+                break;
+            case VGUS_KEY_DUT_BUZZ:                  /* 被测板蜂鸣（0x88） */
+                jig_send_beep();
+                break;
+            default:
+                break;
+            }
         }
     }
 }

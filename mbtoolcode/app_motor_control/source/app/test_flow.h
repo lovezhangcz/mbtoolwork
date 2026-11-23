@@ -53,6 +53,7 @@ void        test_flow_run(void);          /* 10ms 周期 */
 tf_state_e  test_flow_state(void);
 u8          test_flow_progress(void);     /* 0~100，供进度条 */
 const char *test_flow_state_text(void);   /* 当前状态中文文本 */
+void        test_flow_key(u8 idx);        /* 注入按键事件：1=KEY1 2=KEY2（触摸键复用实体键语义） */
 
 #ifdef __cplusplus
 }
